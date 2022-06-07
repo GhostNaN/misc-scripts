@@ -1,0 +1,31 @@
+#!/bin/fish
+
+set DE $argv[1]
+set CLIP $argv[2]
+
+set FILENAME (string collect "screenshot-"(date +%F-%T))
+
+# Get img
+if string match -q "sway" $DE
+    if string match -q "clip" $CLIP
+        grim -g (slurp -o) - | wl-copy
+        notify-send --hint=int:transient:1 -t 2000 -u normal "Copied screenshot to clipboard."
+    else
+        grim -g (slurp -o) ~/Pictures/screenshots/$FILENAME.png
+        
+        if find ~/Pictures/screenshots/$FILENAME.png
+            notify-send --hint=int:transient:1 -t 2000 -u normal "Saved screenshot to ~/Pictures/screenshots/$FILENAME.png."
+        end
+    end
+    
+else if string match -q "kde" $DE
+    if string match -q "clip" $CLIP
+        spectacle --background --region --copy-image
+    else
+        spectacle --background --region --output ~/Pictures/screenshots/$FILENAME.png
+    end
+    
+else
+    echo "No desktop manager used"
+    exit 1
+end

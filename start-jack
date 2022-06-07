@@ -1,0 +1,45 @@
+#!/bin/bash
+
+program=$1
+
+# Get default sink
+sinkInfo=$(pactl info | grep "Default Sink: ")
+userSink=${sinkInfo/"Default Sink: "}
+
+# Get hw:x,y of default sink
+hwInfo=$(pactl list sinks | sed -n /$userSink/,/"Sink #"/p | grep -e "alsa.card =" -e "alsa.device")
+
+card=$(echo $hwInfo | sed -e 's/.*alsa.card = "//g' -e 's/".*//g')
+device=$(echo $hwInfo | sed -e 's/.*alsa.device = "//g' -e 's/".*//g')
+
+defaultHWOut="hw:"$card","$device
+
+# Create Jack server
+pactl suspend-sink $userSink 1
+jackd -T -d alsa -d $defaultHWOut &
+pactl load-module module-jack-sink sink_name="Jack_Sink"
+pactl suspend-sink $userSink 0
+
+# Moving over streams to Default Sink
+pactl set-default-sink "Jack_Sink"
+
+streamsInfo=$(pactl list sink-inputs | grep "Sink Input #")
+if [ ! -z "$streamsInfo" ]; then
+    while IFS= read -r line; do
+        stream=$(echo $line | sed 's/Sink Input #//g')
+        pactl move-sink-input $stream "Jack_Sink"
+    done <<< $streamsInfo
+fi
+
+# Run program using Jack
+if [ ! -z "$program" ]; then
+    eval $program
+else
+    read -rsp $'\nPress any key to kill jack\n' -n1 key
+fi
+
+# Return to pulse
+pactl set-default-sink $userSink
+killall jackd
+
+exit

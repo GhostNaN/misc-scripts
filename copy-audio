@@ -1,0 +1,25 @@
+#!/bin/fish
+
+set RAW_AUDIO /tmp/raw_audio.wav
+set CUT_AUDIO /tmp/cut_audio.opus
+set AUDIO_DEV_NAME "alsa_output.usb-Speed_Dragon_USB_Advanced_Audio_Device-00.iec958-stereo"
+
+# If only one instance is running record
+if test (pidof pw-record | wc -w) -eq 0
+    notify-send --hint=int:transient:1 -t 2000 -u normal "Recording audio..."
+    
+    # Get object.serial for pw-record
+    set AUDIO_DEV (pw-cli list-objects | grep -B 9 $AUDIO_DEV_NAME | grep "object.serial" | sed 's/[^0-9]*//g')
+    
+    # Record but with timeout 
+    timeout -s SIGINT 60 pw-record --target $AUDIO_DEV $RAW_AUDIO
+else
+    killall -s SIGINT pw-record
+    
+    # Lower bitrate and remove silence 
+    ffmpeg -i $RAW_AUDIO -ac 2 -af silenceremove=start_periods=1:stop_periods=1 -acodec libopus -b:a 256k -y $CUT_AUDIO
+    
+    echo -n "file://$CUT_AUDIO" | wl-copy -t text/uri-list
+    
+    notify-send --hint=int:transient:1 -t 2000 -u normal "Copied audio file to clipboard."
+end

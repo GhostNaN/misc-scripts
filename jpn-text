@@ -1,0 +1,45 @@
+#!/bin/fish
+
+set DE $argv[1]
+set ORIENTATION $argv[2]
+
+set img /tmp/jpn_img
+
+# Get img
+if string match -q "sway" $DE
+    grim -g (slurp -o) $img
+else if string match -q "kde" $DE
+    spectacle --nonotify --background --region --output $img
+else
+    echo "No desktop manager used"
+    exit 1
+end
+
+set final_txt (gazou $ORIENTATION /tmp/jpn_img)
+
+
+# If not text is found
+if not string length -q $final_txt
+    set final_txt "No text found"
+end
+
+# Log text
+echo $final_txt | tee -a $txt.log
+
+# Copy to clipboard or timeout
+timeout 2 wl-copy $final_txt
+
+# Old code
+
+# set txt /tmp/jpn_text
+# Process
+# convert $img -channel RGB -negate $img
+# convert $img -filter Mitchell -resize 300% -colorspace gray -threshold 65% -bordercolor White -border 10x10 $img
+# magick $img -level 75%,90%,1.0 -colorspace LinearGray -level 15%,20%,1.0 $img
+
+# Remove blanks
+# set final_txt (sed 's/\s//g' $txt.txt)
+
+# Find text
+# tesseract $img $txt --psm 7 -l jpn_best
+# firefox $txt

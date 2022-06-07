@@ -1,0 +1,8 @@
+#!/bin/fish
+set media $argv[1]
+set start $argv[2]
+set end $argv[3]
+
+set output (string split -n -r -m1 "." $media | string join "(CUTTED).")
+
+ffmpeg -ss $start -to $end -i $media -c:v copy -c:a copy $output
